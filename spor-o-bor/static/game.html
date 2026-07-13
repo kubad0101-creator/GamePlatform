@@ -2,34 +2,55 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Spór o Bór 2</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="game-body">
     <div id="status-bar">
-        <div id="inviteBox">Wyślij link: <input type="text" id="inviteLink" readonly></div>
+        <div id="inviteBox">Oczekuję... Link: <input type="text" id="inviteLink" readonly></div>
         <div id="gameInfo" style="display:none;">
-            Role: <strong id="myRole"></strong> | Tura: <strong id="turnInfo"></strong> | Karty w talii: <span id="deckCount"></span>
+            Rola: <strong id="myRole"></strong> | <span id="turnInfo"></span> | Smoła: <span id="cauldronInfo">0</span>
         </div>
-        <div id="cauldronInfo"></div>
     </div>
 
-    <div class="board-container">
-        <!-- Panel przeciwnika -->
-        <div class="player-area opponent-area" id="opponent-area"></div>
-        
-        <!-- Rzeka i Tama -->
-        <div class="river">
-            <div class="dam-container" id="dam-tiles"></div>
+    <!-- Główny układ -->
+    <div class="main-layout">
+        <!-- Lewy las: Pieniek odrzuconych -->
+        <div class="forest-side left-forest">
+            <div class="stump discard-stump" onclick="openDiscardModal()">
+                <span>Odrzucone</span>
+                <div id="discardCount">0</div>
+            </div>
         </div>
-        
-        <!-- Mój Panel (tu będą lądować moje zagrane karty) -->
-        <div class="player-area my-area" id="my-area"></div>
+
+        <!-- Środkowa plansza (Stół) -->
+        <div class="board-container">
+            <div id="vertical-board">
+                <!-- Rzędy z kafelkami generowane przez JS -->
+            </div>
+        </div>
+
+        <!-- Prawy las: Pieniek dobierania -->
+        <div class="forest-side right-forest">
+            <div class="stump deck-stump">
+                <span>Talia</span>
+                <div id="deckCount">0</div>
+            </div>
+        </div>
     </div>
     
-    <!-- Moja ręka -->
+    <!-- Karty w ręku, na stałe na dole ekranu -->
     <div class="my-hand" id="my-hand"></div>
+
+    <!-- Modal do podglądu kart odrzuconych -->
+    <div id="discardModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeDiscardModal()">&times;</span>
+            <h2>Karty Odrzucone</h2>
+            <div id="discardList" class="discard-list"></div>
+        </div>
+    </div>
 
     <script src="client.js"></script>
 </body>
