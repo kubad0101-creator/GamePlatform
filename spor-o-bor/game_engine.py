@@ -7,8 +7,7 @@ class Card:
     value: int
     color: str
 
-    def to_dict(self):
-        return {"value": self.value, "color": self.color}
+    def to_dict(self): return {"value": self.value, "color": self.color}
 
 class Tile:
     def __init__(self, name: str, req_whole: int, req_damaged: int, rule_type: str):
@@ -20,14 +19,11 @@ class Tile:
         self.cards_attacker: List[Card] = []
         self.cards_defender: List[Card] = []
 
-    def get_capacity(self) -> int:
-        return self.req_damaged if self.state == "uszkodzona" else self.req_whole
+    def get_capacity(self) -> int: return self.req_damaged if self.state == "uszkodzona" else self.req_whole
 
     def to_dict(self):
         return {
-            "name": self.name,
-            "state": self.state,
-            "capacity": self.get_capacity(),
+            "name": self.name, "state": self.state, "capacity": self.get_capacity(),
             "rule": self.rule_type,
             "attacker": [c.to_dict() for c in self.cards_attacker],
             "defender": [c.to_dict() for c in self.cards_defender]
@@ -42,11 +38,9 @@ class Player:
 class GameEngine:
     def __init__(self):
         self.deck: List[Card] = self._generate_deck()
+        self.discard_pile: List[Card] = []
         self.tiles: List[Tile] = self._generate_tiles()
-        self.players: Dict[str, Player] = {
-            "p1": Player("Atakujacy"),
-            "p2": Player("Obronca")
-        }
+        self.players: Dict[str, Player] = {"p1": Player("Atakujacy"), "p2": Player("Obronca")}
         self.current_turn = "p1" 
         self.phase = "attack_resolution" 
         self.winner: Optional[str] = None
@@ -60,13 +54,13 @@ class GameEngine:
 
     def _generate_tiles(self) -> List[Tile]:
         tiles = [
-            Tile("Standardowy 1", 3, 4, "standard"),
-            Tile("Standardowy 2", 3, 4, "standard"),
+            Tile("Standardowy", 3, 4, "standard"),
+            Tile("Standardowy", 3, 4, "standard"),
             Tile("Szybkie zwarcie", 2, 3, "standard"),
-            Tile("Dlugie oblezenie", 4, 5, "standard"),
-            Tile("Czysta Sila", 3, 4, "zgraja"),
-            Tile("Taktyczny odwrot", 3, 4, "slabosc"),
-            Tile("Waskie gardlo", 3, 4, "jeden_kolor")
+            Tile("Długie oblężenie", 4, 5, "standard"),
+            Tile("Czysta Siła", 3, 4, "zgraja"),
+            Tile("Taktyczny odwrót", 3, 4, "slabosc"),
+            Tile("Wąskie gardło", 3, 4, "jeden_kolor")
         ]
         random.shuffle(tiles)
         return tiles
@@ -78,86 +72,64 @@ class GameEngine:
 
     def get_state(self, player_id: str) -> dict:
         return {
-            "turn": self.current_turn,
-            "phase": self.phase,
-            "winner": self.winner,
-            "my_id": player_id,
-            "my_role": self.players[player_id].role,
+            "turn": self.current_turn, "phase": self.phase, "winner": self.winner,
+            "my_id": player_id, "my_role": self.players[player_id].role,
             "cauldrons": self.players[player_id].tar_cauldrons,
             "hand": [c.to_dict() for c in self.players[player_id].hand],
             "tiles": [t.to_dict() for t in self.tiles],
-            "deck_size": len(self.deck)
+            "deck_size": len(self.deck),
+            "discard_pile": [c.to_dict() for c in self.discard_pile]
         }
 
     def skip_attack(self, player_id: str):
-        if self.current_turn != player_id or self.phase != "attack_resolution":
-            raise ValueError("Nie możesz teraz tego zrobić.")
+        if self.current_turn != player_id or self.phase != "attack_resolution": raise ValueError("Nie możesz tego zrobić.")
         self.phase = "play_card"
 
     def play_card(self, player_id: str, card_index: int, tile_index: int):
-        if self.current_turn != player_id or self.phase != "play_card":
-            raise ValueError("To nie jest twoja tura na zagranie karty!")
-        
+        if self.current_turn != player_id or self.phase != "play_card": raise ValueError("To nie jest twoja tura!")
         tile = self.tiles[tile_index]
-        if tile.state == "zniszczona":
-            raise ValueError("Ten kafelek jest zniszczony.")
+        if tile.state == "zniszczona": raise ValueError("Ten kafelek jest zniszczony.")
 
         player_cards = tile.cards_attacker if self.players[player_id].role == "Atakujacy" else tile.cards_defender
-        if len(player_cards) >= tile.get_capacity():
-            raise ValueError("Brak miejsca na tym kafelku!")
+        if len(player_cards) >= tile.get_capacity(): raise ValueError("Brak miejsca!")
 
         player_cards.append(self.players[player_id].hand.pop(card_index))
-        
-        # Automatyczne dobranie karty po zagraniu
-        if self.deck:
-            self.players[player_id].hand.append(self.deck.pop())
-            
+        if self.deck: self.players[player_id].hand.append(self.deck.pop())
         self._end_turn()
 
     def use_tar_cauldron(self, player_id: str, tile_index: int):
         player = self.players[player_id]
-        if player.role != "Obronca" or self.current_turn != player_id or self.phase != "play_card":
-            raise ValueError("Nie możesz teraz użyć kotła ze smołą.")
-        if player.tar_cauldrons <= 0:
-            raise ValueError("Brak kotłów ze smołą!")
+        if player.role != "Obronca" or self.current_turn != player_id or self.phase != "play_card": raise ValueError("Błąd akcji.")
+        if player.tar_cauldrons <= 0: raise ValueError("Brak kotłów!")
         
         tile = self.tiles[tile_index]
-        if not tile.cards_attacker:
-            raise ValueError("Brak kart Atakującego przy tym kafelku.")
+        if not tile.cards_attacker: raise ValueError("Brak celów.")
 
-        tile.cards_attacker.pop()
+        self.discard_pile.append(tile.cards_attacker.pop())
         player.tar_cauldrons -= 1
         self._end_turn()
 
     def attempt_attack(self, player_id: str, tile_index: int):
-        if self.current_turn != player_id or self.phase != "attack_resolution":
-            raise ValueError("Nie możesz teraz atakować.")
-        
+        if self.current_turn != player_id or self.phase != "attack_resolution": raise ValueError("Błąd ataku.")
         tile = self.tiles[tile_index]
-        capacity = tile.get_capacity()
+        cap = tile.get_capacity()
+        if len(tile.cards_attacker) != cap: raise ValueError("Brak pełnej formacji.")
         
-        if len(tile.cards_attacker) != capacity:
-            raise ValueError("Brak pełnej formacji do ataku.")
-        
-        score_attacker = self._evaluate_formation(tile.cards_attacker, tile.rule_type)
-        score_defender = self._evaluate_formation(tile.cards_defender, tile.rule_type)
+        score_a = self._evaluate_formation(tile.cards_attacker, tile.rule_type)
+        score_d = self._evaluate_formation(tile.cards_defender, tile.rule_type)
 
-        if len(tile.cards_defender) == capacity:
-            if score_attacker > score_defender:
-                self._damage_tile(tile)
-            else:
-                raise ValueError("Atak odparty! Twoja formacja jest słabsza lub równa.")
+        if len(tile.cards_defender) == cap:
+            if score_a > score_d: self._damage_tile(tile)
+            else: raise ValueError("Atak odparty!")
         else:
-            if score_attacker > 5000: 
-                self._damage_tile(tile)
-            else:
-                raise ValueError("Nie możesz udowodnić wygranej, póki Obrońca nie ma pełnego układu (uproszczony dowód).")
-
+            if score_a > 5000: self._damage_tile(tile)
+            else: raise ValueError("Nie możesz jeszcze udowodnić wygranej.")
         self.phase = "play_card"
 
     def _damage_tile(self, tile: Tile):
         if tile.state == "cala":
             tile.state = "uszkodzona"
+            self.discard_pile.extend(tile.cards_attacker + tile.cards_defender)
             tile.cards_attacker.clear()
             tile.cards_defender.clear()
         elif tile.state == "uszkodzona":
@@ -183,12 +155,10 @@ class GameEngine:
         elif is_three_of_kind: base = 4000
         elif is_flush: base = 3000
         elif is_straight: base = 2000
-
         return base + suma
 
     def _check_end_game_condition(self):
-        damaged = sum(1 for t in self.tiles if t.state in ["uszkodzona", "zniszczona"])
-        if damaged >= 4: self.winner = "Atakujacy"
+        if sum(1 for t in self.tiles if t.state in ["uszkodzona", "zniszczona"]) >= 4: self.winner = "Atakujacy"
         if not self.deck: self.winner = "Obronca"
 
     def _end_turn(self):
