@@ -10,21 +10,28 @@ class Card:
     def to_dict(self): return {"value": self.value, "color": self.color}
 
 class Tile:
-    def __init__(self, name: str, req_whole: int, req_damaged: int, rule_type: str):
+    def __init__(self, name: str, req_whole: int, req_damaged: int, rule_whole: str, rule_damaged: str):
         self.name = name
         self.state = "cala" 
         self.req_whole = req_whole
         self.req_damaged = req_damaged
-        self.rule_type = rule_type 
+        self.rule_whole = rule_whole 
+        self.rule_damaged = rule_damaged
         self.cards_attacker: List[Card] = []
         self.cards_defender: List[Card] = []
 
-    def get_capacity(self) -> int: return self.req_damaged if self.state == "uszkodzona" else self.req_whole
+    def get_capacity(self) -> int: 
+        return self.req_damaged if self.state == "uszkodzona" else self.req_whole
+
+    def get_current_rule(self) -> str:
+        return self.rule_damaged if self.state == "uszkodzona" else self.rule_whole
 
     def to_dict(self):
         return {
-            "name": self.name, "state": self.state, "capacity": self.get_capacity(),
-            "rule": self.rule_type,
+            "name": self.name, 
+            "state": self.state, 
+            "capacity": self.get_capacity(),
+            "rule": self.get_current_rule(),
             "attacker": [c.to_dict() for c in self.cards_attacker],
             "defender": [c.to_dict() for c in self.cards_defender]
         }
@@ -53,14 +60,15 @@ class GameEngine:
         return deck
 
     def _generate_tiles(self) -> List[Tile]:
+        # ORYGINALNY ZESTAW 7 KAFELKÓW (Przód -> Tył)
         tiles = [
-            Tile("Standardowy", 3, 4, "standard"),
-            Tile("Standardowy", 3, 4, "standard"),
-            Tile("Szybkie zwarcie", 2, 3, "standard"),
-            Tile("Długie oblężenie", 4, 5, "standard"),
-            Tile("Czysta Siła", 3, 4, "zgraja"),
-            Tile("Taktyczny odwrót", 3, 4, "slabosc"),
-            Tile("Wąskie gardło", 3, 4, "jeden_kolor")
+            Tile("Krótka tama", 2, 3, "standard", "standard"),
+            Tile("Średnia tama 1", 3, 4, "standard", "standard"),
+            Tile("Średnia tama 2", 3, 4, "standard", "standard"),
+            Tile("Długa tama 1", 4, 5, "standard", "standard"),
+            Tile("Długa tama 2", 4, 5, "standard", "standard"),
+            Tile("Siła", 3, 3, "standard", "zgraja"),      # Po uszkodzeniu: Najwyższa suma
+            Tile("Słabość", 3, 3, "standard", "slabosc")   # Po uszkodzeniu: Najniższa suma
         ]
         random.shuffle(tiles)
         return tiles
@@ -115,8 +123,9 @@ class GameEngine:
         cap = tile.get_capacity()
         if len(tile.cards_attacker) != cap: raise ValueError("Brak pełnej formacji.")
         
-        score_a = self._evaluate_formation(tile.cards_attacker, tile.rule_type)
-        score_d = self._evaluate_formation(tile.cards_defender, tile.rule_type)
+        current_rule = tile.get_current_rule()
+        score_a = self._evaluate_formation(tile.cards_attacker, current_rule)
+        score_d = self._evaluate_formation(tile.cards_defender, current_rule)
 
         if len(tile.cards_defender) == cap:
             if score_a > score_d: self._damage_tile(tile)
