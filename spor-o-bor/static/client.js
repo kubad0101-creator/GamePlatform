@@ -4,7 +4,6 @@ if (!roomId) window.location.href = '/';
 
 document.getElementById('inviteLink').value = window.location.href;
 
-// Mechanizm Sesji - chroni przed wyrzuceniem po odświeżeniu
 let clientId = localStorage.getItem('sob_client_id');
 if (!clientId) {
     clientId = Math.random().toString(36).substring(2, 10);
@@ -46,7 +45,7 @@ function renderAll() {
     document.getElementById('turnInfo').className = isMyTurn ? "active-turn" : "waiting-turn";
 
     renderHand();
-    renderBoardVertical();
+    renderBoard();
 }
 
 function renderHand() {
@@ -56,7 +55,7 @@ function renderHand() {
     if (gameState.phase === 'attack_resolution' && gameState.turn === gameState.my_id) {
         const skipBtn = document.createElement('button');
         skipBtn.innerText = "POMIŃ ATAK -> ZAGRAJ KARTĘ";
-        skipBtn.style.padding = "15px"; skipBtn.style.fontWeight = "bold"; skipBtn.style.background = "#e67e22";
+        skipBtn.style.padding = "15px"; skipBtn.style.fontWeight = "bold"; skipBtn.style.background = "#e67e22"; skipBtn.style.cursor = "pointer";
         skipBtn.onclick = () => ws.send(JSON.stringify({action: "skip_attack"}));
         handDiv.appendChild(skipBtn);
         return; 
@@ -64,7 +63,7 @@ function renderHand() {
 
     gameState.hand.forEach((card, index) => {
         const cDiv = document.createElement('div');
-        cDiv.className = `card ${card.color} ${index === selectedCardIndex ? 'selected' : ''}`;
+        cDiv.className = `card hand-card ${card.color} ${index === selectedCardIndex ? 'selected' : ''}`;
         cDiv.innerText = card.value;
         cDiv.onclick = () => {
             if (gameState.turn === gameState.my_id) {
@@ -76,41 +75,36 @@ function renderHand() {
     });
 }
 
-function renderBoardVertical() {
-    const board = document.getElementById('vertical-board');
+function renderBoard() {
+    const board = document.getElementById('horizontal-board');
     board.innerHTML = '';
-
     const amIAttacker = gameState.my_role === 'Atakujacy';
 
     gameState.tiles.forEach((tile, index) => {
-        const row = document.createElement('div');
-        row.className = 'board-row';
+        const col = document.createElement('div');
+        col.className = 'board-col';
         
-        // Zawsze MOJE karty po lewej stronie rzeki, przeciwnika po prawej
-        const myCardsData = amIAttacker ? tile.attacker : tile.defender;
+        // Zawsze MOJE karty lądują na dole, przeciwnika u góry
         const oppCardsData = amIAttacker ? tile.defender : tile.attacker;
+        const myCardsData = amIAttacker ? tile.attacker : tile.defender;
 
-        // Kontener na moje karty (Lewa)
-        const myArea = document.createElement('div');
-        myArea.className = 'table-cards-area';
-        myCardsData.forEach(c => myArea.appendChild(createMiniCard(c)));
+        // Kontener Górny (Przeciwnik)
+        const oppArea = document.createElement('div');
+        oppArea.className = 'table-cards-area opp-area';
+        oppCardsData.forEach(c => oppArea.appendChild(createMiniCard(c)));
 
-        // Rzeka z kafelkiem (Środek)
-        const riverArea = document.createElement('div');
-        riverArea.className = 'river-tile-area';
-        
+        // Środek (Kafelek na tle rzeki)
         const tileDiv = document.createElement('div');
         tileDiv.className = `tile ${tile.state}`;
         tileDiv.innerHTML = `<span>${tile.name}</span><span>${tile.capacity} KART</span><span>(${tile.rule})</span>`;
         
-        // Zagrywanie karty na ten kafelek
         tileDiv.onclick = () => {
             if (selectedCardIndex !== null && gameState.turn === gameState.my_id && gameState.phase === "play_card") {
                 ws.send(JSON.stringify({ action: "play_card", card_index: selectedCardIndex, tile_index: index }));
             }
         };
 
-        // Przyciski atak / kocioł przypięte do kafelka
+        // Przyciski akcji
         if (gameState.turn === gameState.my_id && tile.state !== 'zniszczona') {
             if (amIAttacker && gameState.phase === 'attack_resolution' && tile.attacker.length === tile.capacity) {
                 const atkBtn = document.createElement('button');
@@ -125,18 +119,17 @@ function renderBoardVertical() {
                 tileDiv.appendChild(caulBtn);
             }
         }
-        riverArea.appendChild(tileDiv);
 
-        // Kontener na karty przeciwnika (Prawa)
-        const oppArea = document.createElement('div');
-        oppArea.className = 'table-cards-area';
-        oppCardsData.forEach(c => oppArea.appendChild(createMiniCard(c)));
+        // Kontener Dolny (Ja)
+        const myArea = document.createElement('div');
+        myArea.className = 'table-cards-area my-area';
+        myCardsData.forEach(c => myArea.appendChild(createMiniCard(c)));
 
-        // Składanie rzędu: Moje -> Rzeka -> Przeciwnik
-        row.appendChild(myArea);
-        row.appendChild(riverArea);
-        row.appendChild(oppArea);
-        board.appendChild(row);
+        // Układanie kolumny od góry do dołu
+        col.appendChild(oppArea);
+        col.appendChild(tileDiv);
+        col.appendChild(myArea);
+        board.appendChild(col);
     });
 }
 
@@ -147,7 +140,6 @@ function createMiniCard(card) {
     return d;
 }
 
-// Obsługa okienka odrzuconych kart
 function openDiscardModal() {
     const modal = document.getElementById("discardModal");
     const list = document.getElementById("discardList");
@@ -155,10 +147,12 @@ function openDiscardModal() {
     
     if (gameState && gameState.discard_pile.length > 0) {
         gameState.discard_pile.forEach(card => {
-            list.appendChild(createMiniCard(card));
+            const c = createMiniCard(card);
+            c.style.marginTop = '0'; // W oknie odrzuconych nie chcemy, żeby nachodziły
+            list.appendChild(c);
         });
     } else {
-        list.innerHTML = "<p>Brak odrzuconych kart.</p>";
+        list.innerHTML = "<p style='color: white;'>Brak odrzuconych kart.</p>";
     }
     modal.style.display = "block";
 }
