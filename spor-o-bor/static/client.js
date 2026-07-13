@@ -29,6 +29,13 @@ ws.onmessage = (event) => {
     }
 };
 
+function getRuleName(ruleCode) {
+    if (ruleCode === 'standard') return 'Układy';
+    if (ruleCode === 'zgraja') return 'Najwyższa suma';
+    if (ruleCode === 'slabosc') return 'Najniższa suma';
+    return ruleCode;
+}
+
 function renderAll() {
     if (gameState.winner) alert(`Koniec gry! Zwycięzca: ${gameState.winner}`);
 
@@ -84,19 +91,17 @@ function renderBoard() {
         const col = document.createElement('div');
         col.className = 'board-col';
         
-        // Zawsze MOJE karty lądują na dole, przeciwnika u góry
         const oppCardsData = amIAttacker ? tile.defender : tile.attacker;
         const myCardsData = amIAttacker ? tile.attacker : tile.defender;
 
-        // Kontener Górny (Przeciwnik)
         const oppArea = document.createElement('div');
         oppArea.className = 'table-cards-area opp-area';
         oppCardsData.forEach(c => oppArea.appendChild(createMiniCard(c)));
 
-        // Środek (Kafelek na tle rzeki)
         const tileDiv = document.createElement('div');
         tileDiv.className = `tile ${tile.state}`;
-        tileDiv.innerHTML = `<span>${tile.name}</span><span>${tile.capacity} KART</span><span>(${tile.rule})</span>`;
+        // Zaktualizowane etykiety, aby korzystały z naszej nowej funkcji getRuleName
+        tileDiv.innerHTML = `<span>${tile.name}</span><br><span>${tile.capacity} KART</span><br><span style="font-size: 8px;">(${getRuleName(tile.rule)})</span>`;
         
         tileDiv.onclick = () => {
             if (selectedCardIndex !== null && gameState.turn === gameState.my_id && gameState.phase === "play_card") {
@@ -104,7 +109,6 @@ function renderBoard() {
             }
         };
 
-        // Przyciski akcji
         if (gameState.turn === gameState.my_id && tile.state !== 'zniszczona') {
             if (amIAttacker && gameState.phase === 'attack_resolution' && tile.attacker.length === tile.capacity) {
                 const atkBtn = document.createElement('button');
@@ -120,12 +124,10 @@ function renderBoard() {
             }
         }
 
-        // Kontener Dolny (Ja)
         const myArea = document.createElement('div');
         myArea.className = 'table-cards-area my-area';
         myCardsData.forEach(c => myArea.appendChild(createMiniCard(c)));
 
-        // Układanie kolumny od góry do dołu
         col.appendChild(oppArea);
         col.appendChild(tileDiv);
         col.appendChild(myArea);
@@ -148,7 +150,7 @@ function openDiscardModal() {
     if (gameState && gameState.discard_pile.length > 0) {
         gameState.discard_pile.forEach(card => {
             const c = createMiniCard(card);
-            c.style.marginTop = '0'; // W oknie odrzuconych nie chcemy, żeby nachodziły
+            c.style.marginTop = '0'; 
             list.appendChild(c);
         });
     } else {
