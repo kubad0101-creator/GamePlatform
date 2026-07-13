@@ -8,20 +8,28 @@
 </head>
 <body class="game-body">
     <div id="status-bar">
-        Czekam na przeciwnika... Wyślij znajomemu ten link: 
-        <input type="text" id="inviteLink" readonly>
-        <br><strong id="myRole" style="color: #f1c40f;"></strong>
+        <div id="inviteBox">Wyślij link: <input type="text" id="inviteLink" readonly></div>
+        <div id="gameInfo" style="display:none;">
+            Role: <strong id="myRole"></strong> | Tura: <strong id="turnInfo"></strong> | Karty w talii: <span id="deckCount"></span>
+        </div>
+        <div id="cauldronInfo"></div>
     </div>
 
     <div class="board-container">
-        <div class="player-area opponent-area" id="opponent-cards">Przeciwnik</div>
+        <!-- Panel przeciwnika -->
+        <div class="player-area opponent-area" id="opponent-area"></div>
+        
+        <!-- Rzeka i Tama -->
         <div class="river">
             <div class="dam-container" id="dam-tiles"></div>
         </div>
-        <div class="player-area my-area" id="my-cards">Moje karty (Stół)</div>
+        
+        <!-- Mój Panel (tu będą lądować moje zagrane karty) -->
+        <div class="player-area my-area" id="my-area"></div>
     </div>
     
-    <div class="my-hand" id="my-hand">Moja Ręka</div>
+    <!-- Moja ręka -->
+    <div class="my-hand" id="my-hand"></div>
 
     <script src="client.js"></script>
 </body>
