@@ -10,34 +10,45 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 class ConnectionManager:
     def __init__(self):
+        # Struktura: "room_id": { "engine": GameEngine, "clients": { "client_id": "p1" / "p2" }, "sockets": { "client_id": ws } }
         self.rooms = {}
 
-    async def connect(self, websocket: WebSocket, room_id: str):
+    async def connect(self, websocket: WebSocket, room_id: str, client_id: str):
         await websocket.accept()
         if room_id not in self.rooms:
-            self.rooms[room_id] = {"engine": GameEngine(), "players": []}
+            self.rooms[room_id] = {"engine": GameEngine(), "clients": {}, "sockets": {}}
             
         room = self.rooms[room_id]
-        if len(room["players"]) >= 2:
-            await websocket.send_text(json.dumps({"type": "error", "message": "Pokój pełny!"}))
+        
+        # Jeśli gracz wraca do gry po odświeżeniu
+        if client_id in room["clients"]:
+            room["sockets"][client_id] = websocket
+            return True
+            
+        # Jeśli to nowy gracz
+        if len(room["clients"]) == 0:
+            room["clients"][client_id] = "p1"
+        elif len(room["clients"]) == 1:
+            room["clients"][client_id] = "p2"
+        else:
+            await websocket.send_text(json.dumps({"type": "error", "message": "Pokój jest pełny!"}))
             await websocket.close()
             return False
             
-        room["players"].append(websocket)
+        room["sockets"][client_id] = websocket
         return True
 
-    def disconnect(self, websocket: WebSocket, room_id: str):
-        if room_id in self.rooms and websocket in self.rooms[room_id]["players"]:
-            self.rooms[room_id]["players"].remove(websocket)
-            if len(self.rooms[room_id]["players"]) == 0:
-                del self.rooms[room_id]
-
+    def disconnect(self, room_id: str, client_id: str):
+        if room_id in self.rooms and client_id in self.rooms[room_id]["sockets"]:
+            del self.rooms[room_id]["sockets"][client_id]
+            # Nie usuwamy klienta z room["clients"], aby mógł wrócić!
+            
     async def broadcast_state(self, room_id: str):
         room = self.rooms[room_id]
-        if len(room["players"]) == 2:
+        if len(room["clients"]) == 2:
             engine = room["engine"]
-            for i, ws in enumerate(room["players"]):
-                pid = "p1" if i == 0 else "p2"
+            for cid, ws in room["sockets"].items():
+                pid = room["clients"][cid]
                 try:
                     await ws.send_text(json.dumps({"type": "gameState", "state": engine.get_state(pid)}))
                 except:
@@ -52,8 +63,8 @@ async def root(): return RedirectResponse(url="/static/index.html")
 async def create_room(): return {"room_id": str(uuid.uuid4())[:8]}
 
 @app.websocket("/ws/{room_id}")
-async def websocket_endpoint(websocket: WebSocket, room_id: str):
-    if not await manager.connect(websocket, room_id): return
+async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str):
+    if not await manager.connect(websocket, room_id, client_id): return
     
     try:
         await manager.broadcast_state(room_id)
@@ -62,23 +73,16 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
             msg = json.loads(data)
             room = manager.rooms[room_id]
             engine = room["engine"]
-            
-            p_idx = room["players"].index(websocket)
-            pid = "p1" if p_idx == 0 else "p2"
+            pid = room["clients"][client_id]
 
             try:
-                if msg["action"] == "play_card":
-                    engine.play_card(pid, msg["card_index"], msg["tile_index"])
-                elif msg["action"] == "attack":
-                    engine.attempt_attack(pid, msg["tile_index"])
-                elif msg["action"] == "skip_attack":
-                    engine.skip_attack(pid)
-                elif msg["action"] == "cauldron":
-                    engine.use_tar_cauldron(pid, msg["tile_index"])
+                if msg["action"] == "play_card": engine.play_card(pid, msg["card_index"], msg["tile_index"])
+                elif msg["action"] == "attack": engine.attempt_attack(pid, msg["tile_index"])
+                elif msg["action"] == "skip_attack": engine.skip_attack(pid)
+                elif msg["action"] == "cauldron": engine.use_tar_cauldron(pid, msg["tile_index"])
             except ValueError as e:
                 await websocket.send_text(json.dumps({"type": "error", "message": str(e)}))
 
             await manager.broadcast_state(room_id)
-
     except WebSocketDisconnect:
-        manager.disconnect(websocket, room_id)
+        manager.disconnect(room_id, client_id)
