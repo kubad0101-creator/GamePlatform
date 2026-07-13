@@ -8,31 +8,31 @@
 </head>
 <body class="game-body">
     <div id="status-bar">
-        <div id="inviteBox">Oczekuję... Link: <input type="text" id="inviteLink" readonly></div>
+        <div id="inviteBox">Oczekuję na gracza... Skopiuj link: <input type="text" id="inviteLink" readonly></div>
         <div id="gameInfo" style="display:none;">
             Rola: <strong id="myRole"></strong> | <span id="turnInfo"></span> | Smoła: <span id="cauldronInfo">0</span>
         </div>
     </div>
 
-    <!-- Główny układ -->
+    <!-- Główny układ ekranu -->
     <div class="main-layout">
         <!-- Lewy las: Pieniek odrzuconych -->
-        <div class="forest-side left-forest">
+        <div class="forest-side">
             <div class="stump discard-stump" onclick="openDiscardModal()">
                 <span>Odrzucone</span>
                 <div id="discardCount">0</div>
             </div>
         </div>
 
-        <!-- Środkowa plansza (Stół) -->
+        <!-- Środkowa plansza (Stół) - przewijana na boki na telefonie -->
         <div class="board-container">
-            <div id="vertical-board">
-                <!-- Rzędy z kafelkami generowane przez JS -->
+            <div id="horizontal-board">
+                <!-- Tu skrypt wrzuci kafelki i karty -->
             </div>
         </div>
 
         <!-- Prawy las: Pieniek dobierania -->
-        <div class="forest-side right-forest">
+        <div class="forest-side">
             <div class="stump deck-stump">
                 <span>Talia</span>
                 <div id="deckCount">0</div>
@@ -40,7 +40,7 @@
         </div>
     </div>
     
-    <!-- Karty w ręku, na stałe na dole ekranu -->
+    <!-- Karty w ręku (zawsze na samym dole) -->
     <div class="my-hand" id="my-hand"></div>
 
     <!-- Modal do podglądu kart odrzuconych -->
