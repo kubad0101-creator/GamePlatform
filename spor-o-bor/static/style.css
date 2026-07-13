@@ -1,59 +1,95 @@
-* { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-body { margin: 0; background: #1a252f; color: white; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+* { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; touch-action: manipulation; }
+body { margin: 0; background: #1b4d2e; color: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
 /* Pasek statusu */
-#status-bar { padding: 10px; background: #000; text-align: center; display: flex; justify-content: space-around; font-size: 14px;}
-#inviteLink { padding: 5px; background: #333; color: white; border: none; width: 200px;}
-.active-turn { color: #2ecc71; font-weight: bold; }
-.waiting-turn { color: #e74c3c; font-weight: bold; }
+#status-bar { padding: 10px; background: rgba(0,0,0,0.8); text-align: center; font-size: 16px; border-bottom: 2px solid #000; z-index: 100; flex-shrink: 0;}
+#inviteLink { background: #333; color: white; border: none; width: 150px; padding: 2px;}
+.active-turn { color: #2ecc71; font-weight: bold; text-transform: uppercase;}
+.waiting-turn { color: #e74c3c; font-weight: bold; text-transform: uppercase;}
 
-/* Plansza */
-.board-container { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
-.player-area { display: flex; justify-content: center; gap: 15px; height: 160px; align-items: center; padding: 10px 0; }
-.dam-container { display: flex; justify-content: center; gap: 15px; z-index: 2; }
+/* Układ główny - wypełnia środek ekranu */
+.main-layout { display: flex; flex-direction: row; flex-grow: 1; overflow: hidden; }
 
-/* Karty */
-.card {
-    width: 60px; height: 90px; border-radius: 8px; border: 2px solid #fff;
-    display: flex; justify-content: center; align-items: center;
-    font-size: 24px; font-weight: bold; cursor: pointer; color: white;
-    text-shadow: 1px 1px 2px black; box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
-    transition: transform 0.2s;
+/* Lasy po bokach */
+.forest-side { width: 90px; flex-shrink: 0; background-image: radial-gradient(circle, #226038 10%, #1b4d2e 90%); display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 0 20px rgba(0,0,0,0.7); z-index: 10;}
+
+/* Pieńki */
+.stump { 
+    width: 75px; height: 75px; border-radius: 50%;
+    background: radial-gradient(circle, #e0ba8f 30%, #a67c52 70%, #5c3a21 100%);
+    border: 4px solid #3d2314; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; color: #3d2314; font-weight: bold; font-size: 11px;
+    box-shadow: 3px 5px 10px rgba(0,0,0,0.5); text-align: center;
 }
-.card:hover { transform: translateY(-10px); }
-.card.selected { border: 4px solid #f1c40f; transform: translateY(-15px); }
-.card-mini { width: 50px; height: 75px; font-size: 18px; margin-bottom: -40px;} /* Nakładanie się na stole */
+.discard-stump { cursor: pointer; transition: transform 0.2s;}
+.discard-stump:hover { transform: scale(1.1); }
+#discardCount, #deckCount { font-size: 20px; font-weight: 900; }
 
-/* Kolory Kart */
-.czerwony { background: #e74c3c; }
-.niebieski { background: #3498db; }
-.zielony { background: #2ecc71; }
-.zolty { background: #f1c40f; color: black; text-shadow: none; }
-.fioletowy { background: #9b59b6; }
+/* Kontener planszy - na telefonie pozwala przewijać w lewo/prawo */
+.board-container { flex-grow: 1; display: flex; align-items: center; justify-content: center; overflow-x: auto; overflow-y: hidden; position: relative; padding: 0 20px;}
 
-/* Rzeka */
-.river {
-    width: 100%; height: 140px;
-    background: linear-gradient(0deg, #1b7ba6 0%, #2980b9 50%, #1b7ba6 100%);
-    display: flex; justify-content: center; align-items: center;
-    position: relative; overflow: hidden;
+/* Wyśrodkowanie przewijania na małych ekranach */
+@media (max-width: 900px) {
+    .board-container { justify-content: flex-start; }
 }
 
-/* Kafelki Tamy */
-.tile-column { display: flex; flex-direction: column; align-items: center; width: 70px; }
+/* Stół z kafelkami */
+#horizontal-board { display: flex; flex-direction: row; gap: 15px; position: relative; padding: 20px 0; }
+
+/* Rzeka (Niebieski pas w tle za kafelkami) */
+#horizontal-board::before {
+    content: ''; position: absolute; top: 50%; left: -50vw; right: -50vw; height: 105px;
+    transform: translateY(-50%); background: linear-gradient(0deg, #1b7ba6 0%, #2980b9 50%, #1b7ba6 100%);
+    z-index: 0; box-shadow: inset 0 0 15px rgba(0,0,0,0.5); pointer-events: none;
+}
+
+/* Pojedyncza kolumna: Karty Wroga -> Kafelek -> Moje Karty */
+.board-col { display: flex; flex-direction: column; align-items: center; z-index: 1; width: 70px; gap: 10px; }
+
+/* Obszary na karty zagrane na stół */
+.table-cards-area { display: flex; flex-direction: column; align-items: center; height: 140px; width: 100%; position: relative; }
+.opp-area { justify-content: flex-end; } 
+.my-area { justify-content: flex-start; }
+
+/* Kafelki z teksturą drewna */
 .tile {
-    width: 70px; height: 110px; background: #34495e; border: 3px solid #7f8c8d;
-    border-radius: 5px; text-align: center; cursor: pointer; display: flex; flex-direction: column;
-    justify-content: space-between; padding: 5px; font-size: 10px;
+    width: 70px; height: 95px; flex-shrink: 0;
+    background: repeating-linear-gradient( 45deg, #8b5a2b, #8b5a2b 10px, #a06b38 10px, #a06b38 20px );
+    border: 3px solid #4a3014; border-radius: 5px; text-align: center; cursor: pointer; display: flex; flex-direction: column;
+    justify-content: center; padding: 2px; font-size: 9px; font-weight: bold; color: white; text-shadow: 1px 1px 2px black; position: relative;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.7); transition: border 0.3s; z-index: 5;
 }
 .tile:hover { border-color: #f1c40f; }
-.tile.uszkodzona { border: 3px dashed #3498db; background: rgba(52, 152, 219, 0.3); }
-.tile.zniszczona { border: none; background: transparent; color: transparent; }
+.tile.uszkodzona { border: 3px dashed #3498db; background: repeating-linear-gradient( 45deg, rgba(139, 90, 43, 0.4), rgba(52, 152, 219, 0.6) 20px ); box-shadow: 0 0 15px #3498db; }
+.tile.zniszczona { background: transparent; border: none; color: transparent; box-shadow: none;}
 
-/* Przyciski Akcji na kafelkach */
-.action-btn { font-size: 10px; padding: 3px; cursor: pointer; background: #e67e22; border: none; color: white; border-radius: 3px; margin-top: 5px; width: 100%;}
-.attack-btn { background: #c0392b; }
-.cauldron-btn { background: #2c3e50; border: 1px solid white;}
+/* Przyciski Akcji na stole */
+.action-btn { font-size: 10px; padding: 5px; cursor: pointer; border: none; color: white; border-radius: 3px; font-weight: bold; position: absolute; width: 60px; left: 2px;}
+.attack-btn { background: #e74c3c; top: -20px; z-index: 10; box-shadow: 0 2px 4px black;}
+.cauldron-btn { background: #000; border: 1px solid white; bottom: -20px; z-index: 10; box-shadow: 0 2px 4px black;}
 
-/* Ręka gracza */
-.my-hand { height: 130px; background: #2c3e50; display: flex; justify-content: center; align-items: center; gap: 10px; border-top: 2px solid #000; }
+/* Karty */
+.card { border-radius: 6px; border: 2px solid #fff; display: flex; justify-content: center; align-items: center; font-weight: bold; color: white; text-shadow: 1px 1px 2px black; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
+.czerwony { background: #e74c3c; } .niebieski { background: #3498db; } .zielony { background: #2ecc71; } .zolty { background: #f1c40f; color: black; text-shadow: none; } .fioletowy { background: #9b59b6; }
+
+/* Karty na ręce */
+.hand-card { width: 55px; height: 85px; font-size: 22px; cursor: pointer; transition: transform 0.2s; flex-shrink: 0;}
+.hand-card.selected { border: 4px solid #f1c40f; transform: translateY(-15px); }
+
+/* Karty miniaturowe na stole (nachodzące na siebie) */
+.card-mini { width: 50px; height: 75px; font-size: 18px; margin-top: -55px; position: relative; z-index: 2;}
+.table-cards-area .card-mini:first-child { margin-top: 0; }
+
+/* Ręka gracza - zamrożona na dole */
+.my-hand { 
+    height: 120px; flex-shrink: 0; width: 100%;
+    background: #2c3e50; border-top: 3px solid #000;
+    display: flex; justify-content: center; align-items: center; gap: 8px; z-index: 100;
+    overflow-x: auto; padding: 0 10px;
+}
+
+/* Modal do kart odrzuconych */
+.modal { display: none; position: fixed; z-index: 200; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); }
+.modal-content { background-color: #34495e; margin: 10% auto; padding: 20px; border: 2px solid #8b5a2b; width: 80%; border-radius: 10px; max-width: 500px;}
+.close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+.discard-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; justify-content: center;}
