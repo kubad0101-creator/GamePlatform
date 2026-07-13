@@ -3,16 +3,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 import uuid
 import json
-from game_engine import GameEngine  # Importujemy silnik z poprzedniej wiadomości
+from game_engine import GameEngine
 
 app = FastAPI()
 
-# Serwowanie plików statycznych (HTML, CSS, JS)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 class ConnectionManager:
     def __init__(self):
-        # Struktura: { "room_id": { "engine": GameEngine, "players": [WebSocket1, WebSocket2] } }
         self.rooms = {}
 
     async def connect(self, websocket: WebSocket, room_id: str):
@@ -36,12 +34,11 @@ class ConnectionManager:
             if websocket in self.rooms[room_id]["players"]:
                 self.rooms[room_id]["players"].remove(websocket)
             if len(self.rooms[room_id]["players"]) == 0:
-                del self.rooms[room_id] # Usuń pusty pokój
+                del self.rooms[room_id]
 
     async def broadcast_game_state(self, room_id: str):
         room = self.rooms[room_id]
         if len(room["players"]) == 2:
-            # Gdy jest 2 graczy, wysyłamy im stan (w uproszczeniu - przypisujemy role)
             for i, ws in enumerate(room["players"]):
                 role = "Atakujacy" if i == 0 else "Obronca"
                 await ws.send_text(json.dumps({
@@ -58,7 +55,7 @@ async def root():
 
 @app.get("/create-room")
 async def create_room():
-    room_id = str(uuid.uuid4())[:8] # Krótki, unikalny kod
+    room_id = str(uuid.uuid4())[:8]
     return {"room_id": room_id}
 
 @app.websocket("/ws/{room_id}")
@@ -70,7 +67,6 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
     try:
         await manager.broadcast_game_state(room_id)
         while True:
-            # Tutaj będziemy odbierać ruchy od graczy w przyszłości
             data = await websocket.receive_text()
             print(f"Otrzymano: {data}")
     except WebSocketDisconnect:
